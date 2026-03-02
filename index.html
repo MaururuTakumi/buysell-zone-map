@@ -73,14 +73,14 @@
 <body>
     <!-- Title -->
     <div class="title-bar">
-        BuySell US — エリアマーケット分析（1.5h圏内 / 5ゾーン / ~325,000世帯）
+        BuySell US — エリアマーケット分析（1h圏内 / 5ゾーン / ~325,000世帯）
         <div class="sub">拠点: Zerega Ave, Bronx ｜ データ: US Census ACS 2019-2023 / FBI UCR 2024 / NYPD CompStat 2024</div>
     </div>
 
     <!-- Legend -->
     <div class="legend">
         <div class="legend-title">BuySell US — エリアマーケット分析</div>
-        <div class="legend-subtitle">NY拠点から車1.5h圏内 ｜ 有力5ゾーン <b>325,000世帯</b></div>
+        <div class="legend-subtitle">NY拠点から車1h圏内 ｜ 有力5ゾーン <b>325,000世帯</b></div>
         <div class="legend-item">
             <div class="legend-dot" style="background:#DC2626;"></div>
             <div><b>P1 最優先</b> — 粗利実績あり（¥670K / ¥127K）</div>
@@ -105,7 +105,7 @@
         <div class="legend-divider"></div>
         <div class="legend-item">
             <div style="width:14px; height:3px; border-top: 2px dashed #1a3a5c; opacity:0.4; flex-shrink:0;"></div>
-            <div style="color:#999;">1.5h ドライビングラジアス（約80km）</div>
+            <div style="color:#999;">1h ドライビングラジアス（約55km）</div>
         </div>
     </div>
 
@@ -113,16 +113,16 @@
     <div class="stats-panel">
         <div class="stats-title">サマリー</div>
         <div class="stats-row">
-            <span class="stats-label">1.5h圏内 総世帯数</span>
-            <span class="stats-value">約530万</span>
+            <span class="stats-label">1h圏内 総世帯数</span>
+            <span class="stats-value">約460万</span>
         </div>
         <div class="stats-row">
-            <span class="stats-label">除外エリア（72 ZIP）</span>
-            <span class="stats-value" style="color:#DC2626;">約85万</span>
+            <span class="stats-label">除外エリア（53 ZIP）</span>
+            <span class="stats-value" style="color:#DC2626;">約70万</span>
         </div>
         <div class="stats-row">
             <span class="stats-label">有効圏内世帯数</span>
-            <span class="stats-value">約445万</span>
+            <span class="stats-value">約390万</span>
         </div>
         <div class="stats-row">
             <span class="stats-label">訪問買取ターゲット（5ゾーン）</span>
@@ -134,7 +134,7 @@
         </div>
         <div class="stats-row">
             <span class="stats-label">宅配買取ターゲット</span>
-            <span class="stats-value" style="color:#F59E0B;">約85万</span>
+            <span class="stats-value" style="color:#F59E0B;">約70万</span>
         </div>
     </div>
 
@@ -150,7 +150,7 @@
             <div class="dot" style="background:#8B5CF6;"></div> Phase 2 候補
         </button>
         <button class="toggle-btn active" onclick="toggleLayer('radius')">
-            <div class="dot" style="background:rgba(26,58,92,0.2);"></div> 1.5h ラジアス
+            <div class="dot" style="background:rgba(26,58,92,0.2);"></div> 1h ラジアス
         </button>
     </div>
 
@@ -214,10 +214,10 @@
     }).addTo(map);
 
     // ========================================
-    // 1.5h DRIVING RADIUS (~80km)
+    // 1h DRIVING RADIUS (~55km)
     // ========================================
     L.circle(WAREHOUSE, {
-        radius: 80000,
+        radius: 55000,
         color: '#1a3a5c', weight: 2, dashArray: '8 6',
         opacity: 0.35, fill: true, fillColor: '#1a3a5c', fillOpacity: 0.03
     }).addTo(layers.radius);
@@ -312,7 +312,7 @@
     });
 
     // ========================================
-    // EXCLUSION ZONES (24 areas)
+    // EXCLUSION ZONES (20 areas — 1h圏内のみ)
     // ========================================
     const exclusionZones = [
         // Bronx
@@ -338,15 +338,10 @@
         { name: 'Elizabeth', center: [40.664, -74.211], radius: 2500, crime: '558/10万' },
         { name: 'Irvington', center: [40.723, -74.235], radius: 1500, crime: '441/10万' },
         { name: 'East Orange', center: [40.767, -74.205], radius: 2000, crime: '487/10万' },
-        { name: 'Camden', center: [39.926, -75.120], radius: 3500, crime: '1,640/10万' },
-        { name: 'Trenton', center: [40.217, -74.743], radius: 3000, crime: '1,289/10万' },
         // NY suburbs
         { name: 'Mt Vernon', center: [40.913, -73.837], radius: 2500, crime: '532/10万' },
         { name: 'Yonkers SW', center: [40.932, -73.899], radius: 2000, crime: 'D-Fグレード' },
-        { name: 'Hempstead', center: [40.706, -73.619], radius: 2500, crime: '447-518/10万' },
-        // CT
-        { name: 'Bridgeport', center: [41.180, -73.195], radius: 3500, crime: '408/10万' },
-        { name: 'Newburgh', center: [41.503, -74.010], radius: 2500, crime: '1,103/10万' }
+        { name: 'Hempstead', center: [40.706, -73.619], radius: 2500, crime: '447-518/10万' }
     ];
 
     exclusionZones.forEach(z => {
