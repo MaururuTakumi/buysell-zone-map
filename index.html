@@ -1,425 +1,439 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>BuySell US — エリアマーケット分析マップ</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
-    
-            <meta name="viewport" content="width=device-width,
-                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-            <style>
-                #map_68e2a3866d80173ca71112fd89933bc5 {
-                    position: relative;
-                    width: 1600.0px;
-                    height: 1000.0px;
-                    left: 0.0%;
-                    top: 0.0%;
-                }
-                .leaflet-container { font-size: 1rem; }
-            </style>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; font-family: 'Helvetica Neue', Arial, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; }
+        .leaflet-container { font-size: 1rem; }
 
-            <style>html, body {
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 0;
-            }
-            </style>
+        /* Title bar */
+        .title-bar {
+            position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 1000;
+            background: linear-gradient(135deg, #1a3a5c, #2d5a8e);
+            color: white; padding: 12px 32px; border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            font-size: 15px; font-weight: bold; letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .title-bar .sub { font-size: 11px; font-weight: normal; opacity: 0.85; margin-top: 2px; }
 
-            <style>#map {
-                position:absolute;
-                top:0;
-                bottom:0;
-                right:0;
-                left:0;
-                }
-            </style>
+        /* Legend */
+        .legend {
+            position: fixed; bottom: 24px; left: 24px; z-index: 1000;
+            background: white; padding: 16px 20px; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #e5e5e5;
+            font-size: 12px; line-height: 2.0; max-width: 380px;
+        }
+        .legend-title { font-size: 14px; font-weight: bold; color: #1a3a5c; margin-bottom: 4px; }
+        .legend-subtitle { font-size: 11px; color: #666; margin-bottom: 10px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+        .legend-divider { border-top: 1px solid #eee; margin: 6px 0; }
 
-            <script>
-                L_NO_TOUCH = false;
-                L_DISABLE_3D = false;
-            </script>
+        /* Stats panel */
+        .stats-panel {
+            position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+            background: white; padding: 16px 20px; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #e5e5e5;
+            font-size: 12px; min-width: 240px;
+        }
+        .stats-title { font-size: 13px; font-weight: bold; color: #1a3a5c; margin-bottom: 10px; }
+        .stats-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+        .stats-row:last-child { border-bottom: none; }
+        .stats-label { color: #666; }
+        .stats-value { font-weight: bold; color: #1a1a1a; }
+        .stats-value.highlight { color: #16a34a; font-size: 14px; }
 
-        
+        /* Toggle buttons */
+        .toggle-panel {
+            position: fixed; top: 80px; right: 16px; z-index: 1000;
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        .toggle-btn {
+            background: white; border: 1px solid #ddd; padding: 8px 14px;
+            border-radius: 6px; font-size: 11px; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .toggle-btn:hover { background: #f5f5f5; }
+        .toggle-btn.active { border-color: #2563EB; background: #EFF6FF; }
+        .toggle-btn .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* Info popup custom */
+        .zone-popup { font-family: 'Helvetica Neue', Arial, sans-serif; }
+        .zone-popup h3 { font-size: 14px; margin-bottom: 4px; }
+        .zone-popup .detail { font-size: 11px; color: #555; line-height: 1.6; }
+    </style>
 </head>
 <body>
-    
-    
-    <div style="
-        position: fixed;
-        bottom: 30px;
-        left: 30px;
-        z-index: 1000;
-        background: white;
-        padding: 18px 24px;
-        border-radius: 8px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-        font-family: 'Helvetica Neue', Arial, sans-serif;
-        font-size: 12px;
-        line-height: 2.0;
-        border: 1px solid #e5e5e5;
-        max-width: 350px;
-    ">
-        <div style="font-size: 15px; font-weight: bold; margin-bottom: 8px; color: #1a3a5c;">
-            BuySell US — オフラインマーケ ターゲットゾーン
+    <!-- Title -->
+    <div class="title-bar">
+        BuySell US — エリアマーケット分析（1.5h圏内 / 5ゾーン / ~325,000世帯）
+        <div class="sub">拠点: Zerega Ave, Bronx ｜ データ: US Census ACS 2019-2023 / FBI UCR 2024 / NYPD CompStat 2024</div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-title">BuySell US — エリアマーケット分析</div>
+        <div class="legend-subtitle">NY拠点から車1.5h圏内 ｜ 有力5ゾーン <b>325,000世帯</b></div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background:#DC2626;"></div>
+            <div><b>P1 最優先</b> — 粗利実績あり（¥670K / ¥127K）</div>
         </div>
-        <div style="font-size: 12px; color: #666; margin-bottom: 10px;">
-            合計 <b>~325,000世帯</b> ｜ 5ゾーン ｜ 全てManhattan 1h前後
+        <div class="legend-item">
+            <div class="legend-dot" style="background:#F59E0B;"></div>
+            <div><b>P2 高ポテンシャル</b> — 未開拓ラグジュアリーエリア</div>
         </div>
-        <div>
-            <span style="display:inline-block; width:16px; height:16px; background:#DC2626; border-radius:50%; margin-right:8px; vertical-align:middle;"></span>
-            <b>P1 最優先</b> — 粗利実績あり（¥670K / ¥127K）
+        <div class="legend-item">
+            <div class="legend-dot" style="background:#2563EB;"></div>
+            <div><b>P3 拡大フェーズ</b> — 世帯数で量を確保</div>
         </div>
-        <div>
-            <span style="display:inline-block; width:16px; height:16px; background:#F59E0B; border-radius:50%; margin-right:8px; vertical-align:middle;"></span>
-            <b>P2 高ポテンシャル</b> — 未開拓のラグジュアリーエリア
+        <div class="legend-divider"></div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background:#8B5CF6; opacity:0.6;"></div>
+            <div><b>Phase 2 候補</b> — 5ゾーン展開後に拡大</div>
         </div>
-        <div>
-            <span style="display:inline-block; width:16px; height:16px; background:#2563EB; border-radius:50%; margin-right:8px; vertical-align:middle;"></span>
-            <b>P3 拡大フェーズ</b> — 世帯数で量を確保
+        <div class="legend-item">
+            <div class="legend-dot" style="background:rgba(255,0,0,0.15); border: 1.5px dashed #e55;"></div>
+            <div style="color:#999;">除外エリア（訪問対象外 → 宅配買取へ誘導）</div>
         </div>
-        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #eee;">
-            <span style="display:inline-block; width:16px; height:16px; background:rgba(255,0,0,0.1); border: 1px dashed #f88; border-radius:50%; margin-right:8px; vertical-align:middle;"></span>
-            <span style="color: #999;">治安注意エリア（マーケ対象外）</span>
+        <div class="legend-divider"></div>
+        <div class="legend-item">
+            <div style="width:14px; height:3px; border-top: 2px dashed #1a3a5c; opacity:0.4; flex-shrink:0;"></div>
+            <div style="color:#999;">1.5h ドライビングラジアス（約80km）</div>
         </div>
     </div>
-    
-    
-    <div style="
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
-        background: #1a3a5c;
-        color: white;
-        padding: 14px 36px;
-        border-radius: 8px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-        font-family: 'Helvetica Neue', Arial, sans-serif;
-        font-size: 17px;
-        font-weight: bold;
-        letter-spacing: 0.5px;
-    ">
-        BuySell US — Offline Marketing Target Zones (5 Zones / ~325,000 Households)
+
+    <!-- Stats -->
+    <div class="stats-panel">
+        <div class="stats-title">サマリー</div>
+        <div class="stats-row">
+            <span class="stats-label">1.5h圏内 総世帯数</span>
+            <span class="stats-value">約530万</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">除外エリア（72 ZIP）</span>
+            <span class="stats-value" style="color:#DC2626;">約85万</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">有効圏内世帯数</span>
+            <span class="stats-value">約445万</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">訪問買取ターゲット（5ゾーン）</span>
+            <span class="stats-value highlight">325,000</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">Phase 2 候補</span>
+            <span class="stats-value">258,000</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">宅配買取ターゲット</span>
+            <span class="stats-value" style="color:#F59E0B;">約85万</span>
+        </div>
     </div>
-    
-    
-            <div class="folium-map" id="map_68e2a3866d80173ca71112fd89933bc5" ></div>
-        
+
+    <!-- Toggle buttons -->
+    <div class="toggle-panel">
+        <button class="toggle-btn active" onclick="toggleLayer('priority')">
+            <div class="dot" style="background:#DC2626;"></div> 有力5ゾーン
+        </button>
+        <button class="toggle-btn active" onclick="toggleLayer('exclusion')">
+            <div class="dot" style="background:rgba(255,0,0,0.3);"></div> 除外エリア
+        </button>
+        <button class="toggle-btn" onclick="toggleLayer('phase2')">
+            <div class="dot" style="background:#8B5CF6;"></div> Phase 2 候補
+        </button>
+        <button class="toggle-btn active" onclick="toggleLayer('radius')">
+            <div class="dot" style="background:rgba(26,58,92,0.2);"></div> 1.5h ラジアス
+        </button>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+    // ========================================
+    // MAP INIT
+    // ========================================
+    const WAREHOUSE = [40.823, -73.841]; // Zerega Ave, Bronx
+
+    const map = L.map('map', {
+        center: [40.72, -73.85],
+        zoom: 10,
+        zoomControl: true,
+        preferCanvas: false
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20,
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(map);
+
+    // ========================================
+    // LAYER GROUPS
+    // ========================================
+    const layers = {
+        priority: L.layerGroup().addTo(map),
+        exclusion: L.layerGroup().addTo(map),
+        phase2: L.layerGroup(),  // hidden by default
+        radius: L.layerGroup().addTo(map)
+    };
+
+    function toggleLayer(name) {
+        const btn = event.currentTarget;
+        if (map.hasLayer(layers[name])) {
+            map.removeLayer(layers[name]);
+            btn.classList.remove('active');
+        } else {
+            map.addLayer(layers[name]);
+            btn.classList.add('active');
+        }
+    }
+
+    // ========================================
+    // WAREHOUSE MARKER
+    // ========================================
+    L.marker(WAREHOUSE, {
+        icon: L.divIcon({
+            html: `<div style="
+                font-family: 'Helvetica Neue', Arial, sans-serif;
+                background: #1a1a1a; color: white;
+                padding: 5px 12px; border-radius: 5px;
+                font-size: 12px; font-weight: bold;
+                white-space: nowrap;
+                box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+            ">📍 NY拠点（Zerega Ave, Bronx）</div>`,
+            iconSize: [220, 30], iconAnchor: [110, 30], className: 'empty'
+        })
+    }).addTo(map);
+
+    // ========================================
+    // 1.5h DRIVING RADIUS (~80km)
+    // ========================================
+    L.circle(WAREHOUSE, {
+        radius: 80000,
+        color: '#1a3a5c', weight: 2, dashArray: '8 6',
+        opacity: 0.35, fill: true, fillColor: '#1a3a5c', fillOpacity: 0.03
+    }).addTo(layers.radius);
+
+    // ========================================
+    // PRIORITY ZONES
+    // ========================================
+    const priorityZones = [
+        {
+            name: 'South Westchester, NY', priority: 'P1', color: '#DC2626',
+            center: [40.965, -73.82], radius: 10000,
+            labelPos: [41.01, -73.78],
+            households: '~75,000', income: '$118-570K', drive: '25-45分',
+            towns: 'Scarsdale, Bronxville, Rye, Eastchester, Larchmont, Mamaroneck',
+            profit: '¥670K'
+        },
+        {
+            name: 'Northern Bergen, NJ', priority: 'P1', color: '#DC2626',
+            center: [41.0, -74.04], radius: 9000,
+            labelPos: [41.04, -74.10],
+            households: '~70,000', income: '$124-308K', drive: '30-50分',
+            towns: 'Demarest, Alpine, Tenafly, Ridgewood, Englewood Cliffs',
+            profit: '¥127K'
+        },
+        {
+            name: 'Essex-Morris, NJ', priority: 'P2', color: '#F59E0B',
+            center: [40.745, -74.32], radius: 9000,
+            labelPos: [40.78, -74.40],
+            households: '~55,000', income: '$168-250K+', drive: '35-55分',
+            towns: 'Short Hills, Summit, Chatham, Madison, Livingston',
+            profit: null
+        },
+        {
+            name: 'Nassau North Shore, NY', priority: 'P3', color: '#2563EB',
+            center: [40.755, -73.6], radius: 10000,
+            labelPos: [40.80, -73.55],
+            households: '~65,000', income: '$137-250K+', drive: '30-50分',
+            towns: 'Garden City, Manhasset, Great Neck, Port Washington',
+            profit: null
+        },
+        {
+            name: 'Northern Monmouth, NJ', priority: 'P3', color: '#2563EB',
+            center: [40.39, -74.1], radius: 11000,
+            labelPos: [40.42, -74.03],
+            households: '~60,000', income: '$121-200K+', drive: '55-75分',
+            towns: 'Middletown, Holmdel, Rumson, Colts Neck, Marlboro',
+            profit: '¥311K'
+        }
+    ];
+
+    priorityZones.forEach(z => {
+        // Connection line from warehouse
+        L.polyline([WAREHOUSE, z.center], {
+            color: z.color, weight: 2, opacity: 0.25,
+            dashArray: z.priority === 'P3' ? '5 10' : '0'
+        }).addTo(layers.priority);
+
+        // Zone circle
+        L.circle(z.center, {
+            radius: z.radius, color: z.color, weight: 3,
+            opacity: 0.7, fill: true, fillColor: z.color, fillOpacity: 0.12
+        }).addTo(layers.priority);
+
+        // Info label
+        const profitLine = z.profit
+            ? `<span style="color:#16a34a;font-weight:bold;">粗利実績 ${z.profit}</span>`
+            : '';
+
+        L.marker(z.labelPos, {
+            icon: L.divIcon({
+                html: `<div style="
+                    font-family:'Helvetica Neue',Arial,sans-serif;
+                    white-space:nowrap; background:white;
+                    padding:8px 12px; border-radius:6px;
+                    border:2px solid ${z.color};
+                    box-shadow:0 3px 12px rgba(0,0,0,0.25);
+                    text-align:left; line-height:1.5;
+                ">
+                    <div style="margin-bottom:4px;">
+                        <span style="background:${z.color};color:white;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold;letter-spacing:0.5px;">${z.priority}</span>
+                        <span style="font-size:14px;font-weight:bold;color:#1a1a1a;margin-left:6px;">${z.name}</span>
+                    </div>
+                    <div style="font-size:11px;color:#444;line-height:1.6;">
+                        <b>${z.households}</b> 世帯 ｜ 年収 ${z.income} ｜ 車 ${z.drive}<br>
+                        ${z.towns}<br>
+                        ${profitLine}
+                    </div>
+                </div>`,
+                iconSize: [400, 100], iconAnchor: [200, 100], className: 'empty'
+            })
+        }).addTo(layers.priority);
+    });
+
+    // ========================================
+    // EXCLUSION ZONES (24 areas)
+    // ========================================
+    const exclusionZones = [
+        // Bronx
+        { name: 'South Bronx', center: [40.818, -73.923], radius: 2200, crime: '2,800/10万' },
+        { name: 'Hunts Point', center: [40.816, -73.886], radius: 1500, crime: '1,360/10万' },
+        { name: 'Morrisania', center: [40.829, -73.904], radius: 1800, crime: '高い' },
+        { name: 'Fordham', center: [40.862, -73.898], radius: 2000, crime: '2024年倍増' },
+        { name: 'Belmont/Tremont', center: [40.849, -73.882], radius: 1800, crime: '全米比4倍' },
+        { name: 'Highbridge', center: [40.838, -73.928], radius: 1500, crime: '高い' },
+        // Brooklyn
+        { name: 'Brownsville', center: [40.662, -73.918], radius: 2000, crime: '1,264/10万' },
+        { name: 'East New York', center: [40.666, -73.882], radius: 2500, crime: '800/10万' },
+        { name: 'Bushwick core', center: [40.694, -73.921], radius: 1500, crime: '727/10万' },
+        // Queens
+        { name: 'South Jamaica', center: [40.692, -73.793], radius: 2000, crime: '高い' },
+        { name: 'Far Rockaway', center: [40.600, -73.751], radius: 2500, crime: '+18% YoY' },
+        // Manhattan
+        { name: 'East Harlem', center: [40.795, -73.942], radius: 1800, crime: '4,336/10万' },
+        { name: 'Central Harlem N', center: [40.814, -73.946], radius: 2000, crime: '高い' },
+        // NJ
+        { name: 'Newark', center: [40.735, -74.172], radius: 4000, crime: '581/10万' },
+        { name: 'Paterson', center: [40.917, -74.171], radius: 3000, crime: '969/10万' },
+        { name: 'Elizabeth', center: [40.664, -74.211], radius: 2500, crime: '558/10万' },
+        { name: 'Irvington', center: [40.723, -74.235], radius: 1500, crime: '441/10万' },
+        { name: 'East Orange', center: [40.767, -74.205], radius: 2000, crime: '487/10万' },
+        { name: 'Camden', center: [39.926, -75.120], radius: 3500, crime: '1,640/10万' },
+        { name: 'Trenton', center: [40.217, -74.743], radius: 3000, crime: '1,289/10万' },
+        // NY suburbs
+        { name: 'Mt Vernon', center: [40.913, -73.837], radius: 2500, crime: '532/10万' },
+        { name: 'Yonkers SW', center: [40.932, -73.899], radius: 2000, crime: 'D-Fグレード' },
+        { name: 'Hempstead', center: [40.706, -73.619], radius: 2500, crime: '447-518/10万' },
+        // CT
+        { name: 'Bridgeport', center: [41.180, -73.195], radius: 3500, crime: '408/10万' },
+        { name: 'Newburgh', center: [41.503, -74.010], radius: 2500, crime: '1,103/10万' }
+    ];
+
+    exclusionZones.forEach(z => {
+        L.circle(z.center, {
+            radius: z.radius,
+            color: '#FF0000', weight: 1, dashArray: '4 4',
+            opacity: 0.35, fill: true, fillColor: '#FF0000', fillOpacity: 0.10
+        }).addTo(layers.exclusion);
+
+        L.marker(z.center, {
+            icon: L.divIcon({
+                html: `<div style="font-family:Arial;font-size:9px;color:rgba(200,0,0,0.50);white-space:nowrap;text-align:center;">
+                    ⚠ ${z.name}<br><span style="font-size:8px;opacity:0.7;">${z.crime}</span>
+                </div>`,
+                iconSize: [90, 24], iconAnchor: [45, 12], className: 'empty'
+            })
+        }).addTo(layers.exclusion);
+    });
+
+    // ========================================
+    // PHASE 2 CANDIDATE AREAS
+    // ========================================
+    const phase2Zones = [
+        {
+            name: 'Lower Fairfield CT', center: [41.05, -73.63], radius: 8000,
+            households: '95,000', income: '$215K', drive: '45-75分', score: '5/5',
+            note: '全米最高所得エリア。ヘッジファンド回廊。'
+        },
+        {
+            name: 'Nassau South Shore', center: [40.635, -73.69], radius: 6000,
+            households: '45,000', income: '$152K', drive: '35-50分', score: '4/5',
+            note: 'Z4の自然な延長。ジュエリー保有率高。'
+        },
+        {
+            name: 'W. Suffolk', center: [40.86, -73.37], radius: 7000,
+            households: '48,000', income: '$162K', drive: '55-75分', score: '4/5',
+            note: 'Lloyd Harbor = NY州トップ10富裕エリア。'
+        },
+        {
+            name: 'Somerset NJ', center: [40.58, -74.56], radius: 7000,
+            households: '32,000', income: '$182K', drive: '55-80分', score: '4/5',
+            note: '馬産地。Harding Twp $265K MHI。'
+        },
+        {
+            name: 'N. Westchester', center: [41.18, -73.74], radius: 7000,
+            households: '38,000', income: '$198K', drive: '55-85分', score: '4/5',
+            note: 'Pound Ridge $245K MHI。'
+        }
+    ];
+
+    phase2Zones.forEach(z => {
+        // Connection line
+        L.polyline([WAREHOUSE, z.center], {
+            color: '#8B5CF6', weight: 1.5, opacity: 0.2, dashArray: '4 8'
+        }).addTo(layers.phase2);
+
+        // Circle
+        L.circle(z.center, {
+            radius: z.radius,
+            color: '#8B5CF6', weight: 2, dashArray: '6 4',
+            opacity: 0.5, fill: true, fillColor: '#8B5CF6', fillOpacity: 0.08
+        }).addTo(layers.phase2);
+
+        // Label
+        L.marker(z.center, {
+            icon: L.divIcon({
+                html: `<div style="
+                    font-family:'Helvetica Neue',Arial,sans-serif;
+                    white-space:nowrap; background:rgba(255,255,255,0.92);
+                    padding:6px 10px; border-radius:5px;
+                    border:1.5px solid #8B5CF6;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.15);
+                    text-align:left; line-height:1.4;
+                ">
+                    <div style="margin-bottom:2px;">
+                        <span style="background:#8B5CF6;color:white;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;">Ph2</span>
+                        <span style="font-size:12px;font-weight:bold;color:#1a1a1a;margin-left:4px;">${z.name}</span>
+                    </div>
+                    <div style="font-size:10px;color:#555;line-height:1.5;">
+                        <b>${z.households}</b> 世帯 ｜ ${z.income} ｜ 車 ${z.drive} ｜ ★${z.score}
+                    </div>
+                </div>`,
+                iconSize: [350, 70], iconAnchor: [175, 35], className: 'empty'
+            })
+        }).addTo(layers.phase2);
+    });
+
+    </script>
 </body>
-<script>
-    
-    
-            var map_68e2a3866d80173ca71112fd89933bc5 = L.map(
-                "map_68e2a3866d80173ca71112fd89933bc5",
-                {
-                    center: [40.78, -73.92],
-                    crs: L.CRS.EPSG3857,
-                    ...{
-  "zoom": 10,
-  "zoomControl": true,
-  "preferCanvas": false,
-}
-
-                }
-            );
-
-            
-
-        
-    
-            var tile_layer_0e5921d533478652c03cbedb69129201 = L.tileLayer(
-                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-                {
-  "minZoom": 0,
-  "maxZoom": 20,
-  "maxNativeZoom": 20,
-  "noWrap": false,
-  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
-  "subdomains": "abcd",
-  "detectRetina": false,
-  "tms": false,
-  "opacity": 1,
-}
-
-            );
-        
-    
-            tile_layer_0e5921d533478652c03cbedb69129201.addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var poly_line_65dc04c297b9604a9fab2503bd42d547 = L.polyline(
-                [[40.758, -73.9855], [40.965, -73.82]],
-                {"bubblingMouseEvents": true, "color": "#DC2626", "dashArray": "0", "dashOffset": null, "fill": false, "fillColor": "#DC2626", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.3, "smoothFactor": 1.0, "stroke": true, "weight": 2}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var poly_line_7016276fcb13d762197814bcdfe2d917 = L.polyline(
-                [[40.758, -73.9855], [41.0, -74.04]],
-                {"bubblingMouseEvents": true, "color": "#DC2626", "dashArray": "0", "dashOffset": null, "fill": false, "fillColor": "#DC2626", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.3, "smoothFactor": 1.0, "stroke": true, "weight": 2}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var poly_line_e8891fc246bee8d2b813bef41dd0d865 = L.polyline(
-                [[40.758, -73.9855], [40.745, -74.32]],
-                {"bubblingMouseEvents": true, "color": "#F59E0B", "dashArray": "0", "dashOffset": null, "fill": false, "fillColor": "#F59E0B", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.3, "smoothFactor": 1.0, "stroke": true, "weight": 2}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var poly_line_0cbd026eb463064c3b467b19ea019b34 = L.polyline(
-                [[40.758, -73.9855], [40.755, -73.6]],
-                {"bubblingMouseEvents": true, "color": "#2563EB", "dashArray": "5 10", "dashOffset": null, "fill": false, "fillColor": "#2563EB", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.3, "smoothFactor": 1.0, "stroke": true, "weight": 2}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var poly_line_2c4bb6813739a1dd5d45b61706dc5d35 = L.polyline(
-                [[40.758, -73.9855], [40.39, -74.1]],
-                {"bubblingMouseEvents": true, "color": "#2563EB", "dashArray": "5 10", "dashOffset": null, "fill": false, "fillColor": "#2563EB", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.3, "smoothFactor": 1.0, "stroke": true, "weight": 2}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var circle_bcc855fb211575fd40145aca55e47b5b = L.circle(
-                [40.735, -74.172],
-                {"bubblingMouseEvents": true, "color": "#FF0000", "dashArray": "4 4", "dashOffset": null, "fill": true, "fillColor": "#FF0000", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 0.3, "radius": 4000, "stroke": true, "weight": 1}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var marker_bb8767c26ac311babc8e1c15f126e6df = L.marker(
-                [40.735, -74.172],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_de9915345f24f25300fa83018936e437 = L.divIcon({
-  "html": "\n        \u003cdiv style=\"\n            font-family: Arial, sans-serif;\n            font-size: 9px;\n            color: rgba(255,0,0,0.4);\n            white-space: nowrap;\n        \"\u003e\u26a0 Newark\u003c/div\u003e\n        ",
-  "iconSize": [80, 16],
-  "iconAnchor": [40, 8],
-  "className": "empty",
-});
-        
-    
-                marker_bb8767c26ac311babc8e1c15f126e6df.setIcon(div_icon_de9915345f24f25300fa83018936e437);
-            
-    
-            var circle_bc0ed6f384edc5923ec01ecb5cbc2526 = L.circle(
-                [40.917, -74.171],
-                {"bubblingMouseEvents": true, "color": "#FF0000", "dashArray": "4 4", "dashOffset": null, "fill": true, "fillColor": "#FF0000", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 0.3, "radius": 3000, "stroke": true, "weight": 1}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var marker_e24ca47c00626a91c45349e1844cf31b = L.marker(
-                [40.917, -74.171],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_1632cd86443ebaa5d4874b105657d89b = L.divIcon({
-  "html": "\n        \u003cdiv style=\"\n            font-family: Arial, sans-serif;\n            font-size: 9px;\n            color: rgba(255,0,0,0.4);\n            white-space: nowrap;\n        \"\u003e\u26a0 Paterson\u003c/div\u003e\n        ",
-  "iconSize": [80, 16],
-  "iconAnchor": [40, 8],
-  "className": "empty",
-});
-        
-    
-                marker_e24ca47c00626a91c45349e1844cf31b.setIcon(div_icon_1632cd86443ebaa5d4874b105657d89b);
-            
-    
-            var circle_e5799b71728e7d79daa4422ad542b175 = L.circle(
-                [40.913, -73.837],
-                {"bubblingMouseEvents": true, "color": "#FF0000", "dashArray": "4 4", "dashOffset": null, "fill": true, "fillColor": "#FF0000", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 0.3, "radius": 2500.0, "stroke": true, "weight": 1}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var marker_36aae242721019460959b0a33f97b04f = L.marker(
-                [40.913, -73.837],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_bdb24966adecd96e84d08a29d0dbedcb = L.divIcon({
-  "html": "\n        \u003cdiv style=\"\n            font-family: Arial, sans-serif;\n            font-size: 9px;\n            color: rgba(255,0,0,0.4);\n            white-space: nowrap;\n        \"\u003e\u26a0 Mt Vernon\u003c/div\u003e\n        ",
-  "iconSize": [80, 16],
-  "iconAnchor": [40, 8],
-  "className": "empty",
-});
-        
-    
-                marker_36aae242721019460959b0a33f97b04f.setIcon(div_icon_bdb24966adecd96e84d08a29d0dbedcb);
-            
-    
-            var circle_a52158382c1e98049922b6ab6aad84c7 = L.circle(
-                [40.706, -73.619],
-                {"bubblingMouseEvents": true, "color": "#FF0000", "dashArray": "4 4", "dashOffset": null, "fill": true, "fillColor": "#FF0000", "fillOpacity": 0.08, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 0.3, "radius": 2500.0, "stroke": true, "weight": 1}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var marker_634e340cc2cdd6090fa06a79b41c09bd = L.marker(
-                [40.706, -73.619],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_ccccb7cba4b9a01951fe382282003ce5 = L.divIcon({
-  "html": "\n        \u003cdiv style=\"\n            font-family: Arial, sans-serif;\n            font-size: 9px;\n            color: rgba(255,0,0,0.4);\n            white-space: nowrap;\n        \"\u003e\u26a0 Hempstead\u003c/div\u003e\n        ",
-  "iconSize": [80, 16],
-  "iconAnchor": [40, 8],
-  "className": "empty",
-});
-        
-    
-                marker_634e340cc2cdd6090fa06a79b41c09bd.setIcon(div_icon_ccccb7cba4b9a01951fe382282003ce5);
-            
-    
-            var circle_d5d1b4843177da3a7780893ed98a4005 = L.circle(
-                [40.965, -73.82],
-                {"bubblingMouseEvents": true, "color": "#DC2626", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#DC2626", "fillOpacity": 0.12, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 0.7, "radius": 10000, "stroke": true, "weight": 3}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var marker_529c939bd39e173b59d31b79e7633818 = L.marker(
-                [40.99, -73.82],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_ede072fa3c22b8482d24376a85504714 = L.divIcon({
-  "html": "\n        \u003cdiv style=\"\n            font-family: \u0027Helvetica Neue\u0027, Arial, sans-serif;\n            white-space: nowrap;\n            background: white;\n            padding: 8px 12px;\n            border-radius: 6px;\n            border: 2px solid #DC2626;\n            box-shadow: 0 3px 10px rgba(0,0,0,0.25);\n            text-align: left;\n            line-height: 1.5;\n        \"\u003e\n            \u003cdiv style=\"margin-bottom: 4px;\"\u003e\n                \u003cspan style=\"\n                    background: #DC2626;\n                    color: white;\n                    padding: 2px 8px;\n                    border-radius: 4px;\n                    font-size: 11px;\n                    font-weight: bold;\n                    letter-spacing: 0.5px;\n                \"\u003eP1\u003c/span\u003e\n                \u003cspan style=\"\n                    font-size: 14px;\n                    font-weight: bold;\n                    color: #1a1a1a;\n                    margin-left: 6px;\n                \"\u003eSouth Westchester, NY\u003c/span\u003e\n            \u003c/div\u003e\n            \u003cdiv style=\"font-size: 11px; color: #444; line-height: 1.6;\"\u003e\n                \u003cb\u003e~75,000\u003c/b\u003e \u4e16\u5e2f \uff5c \u5e74\u53ce $118-570K \uff5c \u8eca 35-50 min\u003cbr\u003e\n                Scarsdale, Bronxville, Rye, Eastchester, Larchmont, Mamaroneck\u003cbr\u003e\n                \u003cspan style=\"color: #16a34a; font-weight: bold;\"\u003e\u7c97\u5229\u5b9f\u7e3e \u00a5670K\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n        ",
-  "iconSize": [380, 100],
-  "iconAnchor": [190, 100],
-  "className": "empty",
-});
-        
-    
-                marker_529c939bd39e173b59d31b79e7633818.setIcon(div_icon_ede072fa3c22b8482d24376a85504714);
-            
-    
-            var circle_c896aacf59e40d1d15ef2d5107c6e11b = L.circle(
-                [41.0, -74.04],
-                {"bubblingMouseEvents": true, "color": "#DC2626", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#DC2626", "fillOpacity": 0.12, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 0.7, "radius": 9000, "stroke": true, "weight": 3}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var marker_9adc6851da0bcb141bb84fa38108a167 = L.marker(
-                [41.025, -74.04],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_5f796e1d79a4b9dca6c390d4d19e8e70 = L.divIcon({
-  "html": "\n        \u003cdiv style=\"\n            font-family: \u0027Helvetica Neue\u0027, Arial, sans-serif;\n            white-space: nowrap;\n            background: white;\n            padding: 8px 12px;\n            border-radius: 6px;\n            border: 2px solid #DC2626;\n            box-shadow: 0 3px 10px rgba(0,0,0,0.25);\n            text-align: left;\n            line-height: 1.5;\n        \"\u003e\n            \u003cdiv style=\"margin-bottom: 4px;\"\u003e\n                \u003cspan style=\"\n                    background: #DC2626;\n                    color: white;\n                    padding: 2px 8px;\n                    border-radius: 4px;\n                    font-size: 11px;\n                    font-weight: bold;\n                    letter-spacing: 0.5px;\n                \"\u003eP1\u003c/span\u003e\n                \u003cspan style=\"\n                    font-size: 14px;\n                    font-weight: bold;\n                    color: #1a1a1a;\n                    margin-left: 6px;\n                \"\u003eNorthern Bergen, NJ\u003c/span\u003e\n            \u003c/div\u003e\n            \u003cdiv style=\"font-size: 11px; color: #444; line-height: 1.6;\"\u003e\n                \u003cb\u003e~70,000\u003c/b\u003e \u4e16\u5e2f \uff5c \u5e74\u53ce $124-308K \uff5c \u8eca 40-55 min\u003cbr\u003e\n                Demarest, Alpine, Tenafly, Ridgewood, Englewood Cliffs\u003cbr\u003e\n                \u003cspan style=\"color: #16a34a; font-weight: bold;\"\u003e\u7c97\u5229\u5b9f\u7e3e \u00a5127K\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n        ",
-  "iconSize": [380, 100],
-  "iconAnchor": [190, 100],
-  "className": "empty",
-});
-        
-    
-                marker_9adc6851da0bcb141bb84fa38108a167.setIcon(div_icon_5f796e1d79a4b9dca6c390d4d19e8e70);
-            
-    
-            var circle_50e0021cf0e9f19a6715fdb39908f35c = L.circle(
-                [40.745, -74.32],
-                {"bubblingMouseEvents": true, "color": "#F59E0B", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#F59E0B", "fillOpacity": 0.12, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 0.7, "radius": 9000, "stroke": true, "weight": 3}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var marker_553c0abdf54f988b812dce21fc403b18 = L.marker(
-                [40.769999999999996, -74.32],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_69ba40ccdf52f4f73517a01a34f7af55 = L.divIcon({
-  "html": "\n        \u003cdiv style=\"\n            font-family: \u0027Helvetica Neue\u0027, Arial, sans-serif;\n            white-space: nowrap;\n            background: white;\n            padding: 8px 12px;\n            border-radius: 6px;\n            border: 2px solid #F59E0B;\n            box-shadow: 0 3px 10px rgba(0,0,0,0.25);\n            text-align: left;\n            line-height: 1.5;\n        \"\u003e\n            \u003cdiv style=\"margin-bottom: 4px;\"\u003e\n                \u003cspan style=\"\n                    background: #F59E0B;\n                    color: white;\n                    padding: 2px 8px;\n                    border-radius: 4px;\n                    font-size: 11px;\n                    font-weight: bold;\n                    letter-spacing: 0.5px;\n                \"\u003eP2\u003c/span\u003e\n                \u003cspan style=\"\n                    font-size: 14px;\n                    font-weight: bold;\n                    color: #1a1a1a;\n                    margin-left: 6px;\n                \"\u003eEssex-Morris, NJ\u003c/span\u003e\n            \u003c/div\u003e\n            \u003cdiv style=\"font-size: 11px; color: #444; line-height: 1.6;\"\u003e\n                \u003cb\u003e~55,000\u003c/b\u003e \u4e16\u5e2f \uff5c \u5e74\u53ce $168-250K+ \uff5c \u8eca 40-55 min\u003cbr\u003e\n                Short Hills, Summit, Chatham, Madison, Livingston\u003cbr\u003e\n                \n            \u003c/div\u003e\n        \u003c/div\u003e\n        ",
-  "iconSize": [380, 100],
-  "iconAnchor": [190, 100],
-  "className": "empty",
-});
-        
-    
-                marker_553c0abdf54f988b812dce21fc403b18.setIcon(div_icon_69ba40ccdf52f4f73517a01a34f7af55);
-            
-    
-            var circle_774109d0759f50d2229864150a756ac9 = L.circle(
-                [40.755, -73.6],
-                {"bubblingMouseEvents": true, "color": "#2563EB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2563EB", "fillOpacity": 0.12, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 0.7, "radius": 10000, "stroke": true, "weight": 3}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var marker_c1cb4b70beebed6de88005fcd044b4b8 = L.marker(
-                [40.78, -73.6],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_88b0c5158ac18b84781313ce9c75c437 = L.divIcon({
-  "html": "\n        \u003cdiv style=\"\n            font-family: \u0027Helvetica Neue\u0027, Arial, sans-serif;\n            white-space: nowrap;\n            background: white;\n            padding: 8px 12px;\n            border-radius: 6px;\n            border: 2px solid #2563EB;\n            box-shadow: 0 3px 10px rgba(0,0,0,0.25);\n            text-align: left;\n            line-height: 1.5;\n        \"\u003e\n            \u003cdiv style=\"margin-bottom: 4px;\"\u003e\n                \u003cspan style=\"\n                    background: #2563EB;\n                    color: white;\n                    padding: 2px 8px;\n                    border-radius: 4px;\n                    font-size: 11px;\n                    font-weight: bold;\n                    letter-spacing: 0.5px;\n                \"\u003eP3\u003c/span\u003e\n                \u003cspan style=\"\n                    font-size: 14px;\n                    font-weight: bold;\n                    color: #1a1a1a;\n                    margin-left: 6px;\n                \"\u003eNassau North Shore, NY\u003c/span\u003e\n            \u003c/div\u003e\n            \u003cdiv style=\"font-size: 11px; color: #444; line-height: 1.6;\"\u003e\n                \u003cb\u003e~65,000\u003c/b\u003e \u4e16\u5e2f \uff5c \u5e74\u53ce $137-250K+ \uff5c \u8eca 40-55 min\u003cbr\u003e\n                Garden City, Manhasset, Great Neck, Port Washington, Old Westbury\u003cbr\u003e\n                \n            \u003c/div\u003e\n        \u003c/div\u003e\n        ",
-  "iconSize": [380, 100],
-  "iconAnchor": [190, 100],
-  "className": "empty",
-});
-        
-    
-                marker_c1cb4b70beebed6de88005fcd044b4b8.setIcon(div_icon_88b0c5158ac18b84781313ce9c75c437);
-            
-    
-            var circle_d29838666d474b9d1b518d2b6d1e30e3 = L.circle(
-                [40.39, -74.1],
-                {"bubblingMouseEvents": true, "color": "#2563EB", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#2563EB", "fillOpacity": 0.12, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 0.7, "radius": 11000, "stroke": true, "weight": 3}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var marker_e489bdf75460256b7563b76712933ec9 = L.marker(
-                [40.415, -74.1],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_8f02fd8cdbe616f383caedda6e95fff7 = L.divIcon({
-  "html": "\n        \u003cdiv style=\"\n            font-family: \u0027Helvetica Neue\u0027, Arial, sans-serif;\n            white-space: nowrap;\n            background: white;\n            padding: 8px 12px;\n            border-radius: 6px;\n            border: 2px solid #2563EB;\n            box-shadow: 0 3px 10px rgba(0,0,0,0.25);\n            text-align: left;\n            line-height: 1.5;\n        \"\u003e\n            \u003cdiv style=\"margin-bottom: 4px;\"\u003e\n                \u003cspan style=\"\n                    background: #2563EB;\n                    color: white;\n                    padding: 2px 8px;\n                    border-radius: 4px;\n                    font-size: 11px;\n                    font-weight: bold;\n                    letter-spacing: 0.5px;\n                \"\u003eP3\u003c/span\u003e\n                \u003cspan style=\"\n                    font-size: 14px;\n                    font-weight: bold;\n                    color: #1a1a1a;\n                    margin-left: 6px;\n                \"\u003eNorthern Monmouth, NJ\u003c/span\u003e\n            \u003c/div\u003e\n            \u003cdiv style=\"font-size: 11px; color: #444; line-height: 1.6;\"\u003e\n                \u003cb\u003e~60,000\u003c/b\u003e \u4e16\u5e2f \uff5c \u5e74\u53ce $121-200K+ \uff5c \u8eca 60-80 min\u003cbr\u003e\n                Middletown, Holmdel, Rumson, Colts Neck, Marlboro\u003cbr\u003e\n                \u003cspan style=\"color: #16a34a; font-weight: bold;\"\u003e\u7c97\u5229\u5b9f\u7e3e \u00a5311K\u003c/span\u003e\n            \u003c/div\u003e\n        \u003c/div\u003e\n        ",
-  "iconSize": [380, 100],
-  "iconAnchor": [190, 100],
-  "className": "empty",
-});
-        
-    
-                marker_e489bdf75460256b7563b76712933ec9.setIcon(div_icon_8f02fd8cdbe616f383caedda6e95fff7);
-            
-    
-            var marker_d037904af17bf349c59b5d9b60a711ac = L.marker(
-                [40.766000000000005, -73.9855],
-                {
-}
-            ).addTo(map_68e2a3866d80173ca71112fd89933bc5);
-        
-    
-            var div_icon_f25318049eaf92b8b36a23ce3736be7d = L.divIcon({
-  "html": "\n    \u003cdiv style=\"\n        font-family: \u0027Helvetica Neue\u0027, Arial, sans-serif;\n        background: #1a1a1a;\n        color: white;\n        padding: 4px 10px;\n        border-radius: 4px;\n        font-size: 11px;\n        font-weight: bold;\n        white-space: nowrap;\n        box-shadow: 0 2px 6px rgba(0,0,0,0.3);\n    \"\u003e\ud83d\udccd NY\u62e0\u70b9 (Manhattan)\u003c/div\u003e\n    ",
-  "iconSize": [180, 28],
-  "iconAnchor": [90, 28],
-  "className": "empty",
-});
-        
-    
-                marker_d037904af17bf349c59b5d9b60a711ac.setIcon(div_icon_f25318049eaf92b8b36a23ce3736be7d);
-            
-</script>
 </html>
