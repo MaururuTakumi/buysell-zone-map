@@ -79,12 +79,29 @@
     <!-- Title -->
     <div class="title-bar">
         BuySell US — LA圏エリアマーケット分析（1h圏内 / 5ゾーン / ~106,000世帯）
-        <div class="sub">拠点: Beverly Hills ｜ データ: US Census ACS 2023 / CrimeGrade / NeighborhoodScout 2024-25</div>
+        <div class="sub">拠点: Culver City（Jefferson/National） ｜ I-405/I-10ハブ ｜ データ: US Census ACS 2023 / CrimeGrade 2024-25</div>
     </div>
 
     <!-- Fire warning -->
     <div class="fire-badge">
         🔥 <b>2025年1月山火事の影響:</b> Pacific Palisades一部が被災・復興中。対象世帯数を20-30%割引いて計算。Brentwood は被害なし。
+    </div>
+
+    <!-- Base info panel -->
+    <div style="
+        position: fixed; top: 130px; left: 24px; z-index: 1000;
+        background: white; padding: 12px 16px; border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.15); border: 1px solid #e5e5e5;
+        font-size: 11px; max-width: 260px; line-height: 1.6;
+    ">
+        <div style="font-size: 12px; font-weight: bold; color: #1a3a5c; margin-bottom: 6px;">📍 拠点: Culver City</div>
+        <div style="color: #555;">
+            <b>Jefferson / National 地区</b><br>
+            I-405 × I-10 ハブ（0.8mi以内）<br>
+            LAXまで4.5mi（8-12分）<br>
+            賃料: ~$2.50/sqft（~$7,500/月）<br>
+            加重平均走行時間: <b style="color:#16a34a;">29.6分</b>（off-peak）
+        </div>
     </div>
 
     <!-- Legend -->
@@ -174,7 +191,7 @@
     // ========================================
     // MAP INIT — LA Metro
     // ========================================
-    const BASE = [34.0736, -118.4004]; // Beverly Hills
+    const BASE = [34.015, -118.395]; // Culver City — Jefferson/National (weighted centroid optimal)
 
     const map = L.map('map', {
         center: [34.02, -118.30],
@@ -222,8 +239,8 @@
                 font-size: 12px; font-weight: bold;
                 white-space: nowrap;
                 box-shadow: 0 3px 10px rgba(0,0,0,0.35);
-            ">📍 LA拠点（Beverly Hills）</div>`,
-            iconSize: [200, 30], iconAnchor: [100, 30], className: 'empty'
+            ">📍 LA拠点（Culver City / I-405×I-10 ハブ）</div>`,
+            iconSize: [280, 30], iconAnchor: [140, 30], className: 'empty'
         })
     }).addTo(map);
 
@@ -265,6 +282,35 @@
     });
 
     // ========================================
+    // WEIGHTED CENTROID MARKER
+    // ========================================
+    const CENTROID = [34.020, -118.414];
+
+    // Centroid crosshair
+    L.circleMarker(CENTROID, {
+        radius: 8, color: '#059669', weight: 2,
+        fillColor: '#059669', fillOpacity: 0.3
+    }).addTo(map);
+
+    L.marker(CENTROID, {
+        icon: L.divIcon({
+            html: `<div style="
+                font-family:'Helvetica Neue',Arial,sans-serif;
+                font-size:10px; color:#059669; white-space:nowrap;
+                background:rgba(255,255,255,0.9); padding:3px 8px;
+                border-radius:4px; border:1px solid #059669;
+                box-shadow:0 1px 4px rgba(0,0,0,0.15);
+            ">⊕ 加重重心（5ゾーン×世帯数）</div>`,
+            iconSize: [180, 22], iconAnchor: [90, -8], className: 'empty'
+        })
+    }).addTo(map);
+
+    // Line from base to centroid (showing proximity)
+    L.polyline([BASE, CENTROID], {
+        color: '#059669', weight: 2, opacity: 0.5, dashArray: '4 4'
+    }).addTo(map);
+
+    // ========================================
     // PRIORITY ZONES — LA 5 Zones
     // ========================================
     const priorityZones = [
@@ -272,41 +318,41 @@
             name: 'Beverly Hills / Bel Air / Holmby Hills', priority: 'S', color: '#DC2626',
             center: [34.0836, -118.4254], radius: 4500,
             labelPos: [34.12, -118.50],
-            households: '~22,000', income: '$195K–$207K', drive: '0–15分',
+            households: '~22,000', income: '$195K–$207K', drive: '20分（peak 35分）',
             towns: 'Beverly Hills 90210/90211/90212, Bel Air (90077), Holmby Hills, Trousdale Estates',
-            note: 'Ultra-HNW最高密度。$200K+世帯 36–51%。紹介制アプローチ推奨。'
+            note: 'Ultra-HNW最高密度。$200K+世帯 36–51%。La Cienega直通で渋滞回避可。'
         },
         {
             name: 'Palisades / Brentwood / Santa Monica', priority: 'S', color: '#DC2626',
             center: [34.0440, -118.5200], radius: 5500,
             labelPos: [34.08, -118.62],
-            households: '~28,000', income: '$110K–$192K', drive: '15–30分',
+            households: '~28,000', income: '$110K–$192K', drive: '22分（peak 38分）',
             towns: 'Pacific Palisades, Brentwood, Brentwood Park, Santa Monica (Wilshire以北)',
-            note: '🔥 Palisades一部は火災復興中。短期はBrentwood優先。'
+            note: '🔥 Palisades一部は火災復興中。I-405N or I-10W経由。短期はBrentwood優先。'
         },
         {
             name: 'Pasadena / San Marino / LCF', priority: 'A', color: '#F59E0B',
             center: [34.1677, -118.1320], radius: 6000,
             labelPos: [34.22, -118.05],
-            households: '~18,000', income: '$105K–$242K', drive: '25–45分',
+            households: '~18,000', income: '$105K–$242K', drive: '45分（peak 68分）',
             towns: 'La Cañada Flintridge ($200K+ 60%), San Marino, Bradbury, Arcadia, Sierra Madre',
-            note: '持家率 88.5% (LCF)。中華系富裕層に日系ブランドの信頼度高。'
+            note: '持家率 88.5%。I-10E→I-110N→I-210E。10-14時出発で渋滞回避。半日ルート推奨。'
         },
         {
             name: 'Palos Verdes / Manhattan Beach', priority: 'A', color: '#F59E0B',
             center: [33.7877, -118.3700], radius: 6500,
             labelPos: [33.72, -118.45],
-            households: '~26,000', income: '$152K–$248K', drive: '30–50分',
+            households: '~26,000', income: '$152K–$248K', drive: '28分（peak 42分）',
             towns: 'Rolling Hills (ゲーテッド), PV Estates, Rancho PV, Manhattan Beach, Hermosa Beach',
-            note: 'Rolling Hills MHI $250K。テック/ファイナンス幹部集中。火-木午前に集中配置。'
+            note: 'Rolling Hills MHI $250K。I-405S→I-105W経由。テック/ファイナンス幹部集中。'
         },
         {
             name: 'Calabasas / Hidden Hills', priority: 'A', color: '#F59E0B',
             center: [34.1364, -118.6606], radius: 5000,
             labelPos: [34.18, -118.74],
-            households: '~12,000', income: '$158K–$250K', drive: '30–45分',
+            households: '~12,000', income: '$158K–$250K', drive: '45分（peak 65分）',
             towns: 'Hidden Hills (ゲーテッド, $200K+ 67.6%), Calabasas, Westlake Village, Agoura Hills',
-            note: 'エンタメ業界セレブ集中。デザイナーバッグ・ジュエリー高額取引。週末アポイント制。'
+            note: 'I-405N→US-101W（Sepulveda Pass）。9時前 or 19時後出発で渋滞回避。週末アポ制。'
         }
     ];
 
