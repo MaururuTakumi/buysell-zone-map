@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>BuySell US — LA圏エリアマーケット分析マップ</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; font-family: 'Helvetica Neue', Arial, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; }
+        .leaflet-container { font-size: 1rem; }
+
+        /* Title bar */
+        .title-bar {
+            position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 1000;
+            background: linear-gradient(135deg, #1a3a5c, #2d5a8e);
+            color: white; padding: 12px 32px; border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            font-size: 15px; font-weight: bold; letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .title-bar .sub { font-size: 11px; font-weight: normal; opacity: 0.85; margin-top: 2px; }
+
+        /* Legend */
+        .legend {
+            position: fixed; bottom: 24px; left: 24px; z-index: 1000;
+            background: white; padding: 16px 20px; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #e5e5e5;
+            font-size: 12px; line-height: 2.0; max-width: 380px;
+        }
+        .legend-title { font-size: 14px; font-weight: bold; color: #1a3a5c; margin-bottom: 4px; }
+        .legend-subtitle { font-size: 11px; color: #666; margin-bottom: 10px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+        .legend-divider { border-top: 1px solid #eee; margin: 6px 0; }
+
+        /* Stats panel */
+        .stats-panel {
+            position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+            background: white; padding: 16px 20px; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2); border: 1px solid #e5e5e5;
+            font-size: 12px; min-width: 260px;
+        }
+        .stats-title { font-size: 13px; font-weight: bold; color: #1a3a5c; margin-bottom: 10px; }
+        .stats-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+        .stats-row:last-child { border-bottom: none; }
+        .stats-label { color: #666; }
+        .stats-value { font-weight: bold; color: #1a1a1a; }
+        .stats-value.highlight { color: #16a34a; font-size: 14px; }
+
+        /* Toggle buttons */
+        .toggle-panel {
+            position: fixed; top: 80px; right: 16px; z-index: 1000;
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        .toggle-btn {
+            background: white; border: 1px solid #ddd; padding: 8px 14px;
+            border-radius: 6px; font-size: 11px; cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .toggle-btn:hover { background: #f5f5f5; }
+        .toggle-btn.active { border-color: #2563EB; background: #EFF6FF; }
+        .toggle-btn .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* Fire warning badge */
+        .fire-badge {
+            position: fixed; top: 80px; left: 24px; z-index: 1000;
+            background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+            border: 1px solid #F59E0B; padding: 10px 16px; border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            font-size: 11px; color: #92400E; max-width: 280px; line-height: 1.5;
+        }
+        .fire-badge b { color: #B45309; }
+    </style>
+</head>
+<body>
+    <!-- Title -->
+    <div class="title-bar">
+        BuySell US — LA圏エリアマーケット分析（1h圏内 / 5ゾーン / ~106,000世帯）
+        <div class="sub">拠点: Beverly Hills ｜ データ: US Census ACS 2023 / CrimeGrade / NeighborhoodScout 2024-25</div>
+    </div>
+
+    <!-- Fire warning -->
+    <div class="fire-badge">
+        🔥 <b>2025年1月山火事の影響:</b> Pacific Palisades一部が被災・復興中。対象世帯数を20-30%割引いて計算。Brentwood は被害なし。
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <div class="legend-title">BuySell US — LA圏エリアマーケット分析</div>
+        <div class="legend-subtitle">Beverly Hills拠点から車1h圏内 ｜ 有力5ゾーン <b>106,000世帯</b></div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background:#DC2626;"></div>
+            <div><b>S 最優先</b> — Ultra-HNW最高密度</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background:#F59E0B;"></div>
+            <div><b>A 高ポテンシャル</b> — 高持家率・世代資産</div>
+        </div>
+        <div class="legend-divider"></div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background:#8B5CF6; opacity:0.6;"></div>
+            <div><b>Phase 2 候補</b> — 5ゾーン展開後に拡大</div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-dot" style="background:rgba(255,0,0,0.15); border: 1.5px dashed #e55;"></div>
+            <div style="color:#999;">除外エリア（訪問対象外 → 宅配買取へ誘導）</div>
+        </div>
+        <div class="legend-divider"></div>
+        <div class="legend-item">
+            <div style="width:14px; height:3px; border-top: 2px dashed #1a3a5c; opacity:0.4; flex-shrink:0;"></div>
+            <div style="color:#999;">1h ドライビングラジアス（約55km）</div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-panel">
+        <div class="stats-title">LA圏サマリー</div>
+        <div class="stats-row">
+            <span class="stats-label">1h圏内 総世帯数（5郡）</span>
+            <span class="stats-value">約520万</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">HHI $150K+ 世帯（5郡合計）</span>
+            <span class="stats-value">約143万</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">除外エリア（46 ZIP）</span>
+            <span class="stats-value" style="color:#DC2626;">約65.5万</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">訪問買取ターゲット（5ゾーン）</span>
+            <span class="stats-value highlight">106,000</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">Phase 2 候補</span>
+            <span class="stats-value">81,800</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">宅配買取ターゲット</span>
+            <span class="stats-value" style="color:#F59E0B;">約65.5万</span>
+        </div>
+        <div class="stats-row">
+            <span class="stats-label">Year 1 推定粗利</span>
+            <span class="stats-value" style="color:#16a34a;">$150K–$600K</span>
+        </div>
+    </div>
+
+    <!-- Toggle buttons -->
+    <div class="toggle-panel">
+        <button class="toggle-btn active" onclick="toggleLayer('priority')">
+            <div class="dot" style="background:#DC2626;"></div> 有力5ゾーン
+        </button>
+        <button class="toggle-btn active" onclick="toggleLayer('exclusion')">
+            <div class="dot" style="background:rgba(255,0,0,0.3);"></div> 除外エリア
+        </button>
+        <button class="toggle-btn" onclick="toggleLayer('phase2')">
+            <div class="dot" style="background:#8B5CF6;"></div> Phase 2 候補
+        </button>
+        <button class="toggle-btn active" onclick="toggleLayer('radius')">
+            <div class="dot" style="background:rgba(26,58,92,0.2);"></div> 1h ラジアス
+        </button>
+        <button class="toggle-btn" onclick="toggleLayer('counties')">
+            <div class="dot" style="background:rgba(34,197,94,0.3);"></div> 郡境界
+        </button>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+    // ========================================
+    // MAP INIT — LA Metro
+    // ========================================
+    const BASE = [34.0736, -118.4004]; // Beverly Hills
+
+    const map = L.map('map', {
+        center: [34.02, -118.30],
+        zoom: 10,
+        zoomControl: true,
+        preferCanvas: false
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20,
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(map);
+
+    // ========================================
+    // LAYER GROUPS
+    // ========================================
+    const layers = {
+        priority: L.layerGroup().addTo(map),
+        exclusion: L.layerGroup().addTo(map),
+        phase2: L.layerGroup(),
+        radius: L.layerGroup().addTo(map),
+        counties: L.layerGroup()
+    };
+
+    function toggleLayer(name) {
+        const btn = event.currentTarget;
+        if (map.hasLayer(layers[name])) {
+            map.removeLayer(layers[name]);
+            btn.classList.remove('active');
+        } else {
+            map.addLayer(layers[name]);
+            btn.classList.add('active');
+        }
+    }
+
+    // ========================================
+    // BASE MARKER — Beverly Hills
+    // ========================================
+    L.marker(BASE, {
+        icon: L.divIcon({
+            html: `<div style="
+                font-family: 'Helvetica Neue', Arial, sans-serif;
+                background: #1a1a1a; color: white;
+                padding: 5px 12px; border-radius: 5px;
+                font-size: 12px; font-weight: bold;
+                white-space: nowrap;
+                box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+            ">📍 LA拠点（Beverly Hills）</div>`,
+            iconSize: [200, 30], iconAnchor: [100, 30], className: 'empty'
+        })
+    }).addTo(map);
+
+    // ========================================
+    // 1h DRIVING RADIUS (~55km)
+    // ========================================
+    L.circle(BASE, {
+        radius: 55000,
+        color: '#1a3a5c', weight: 2, dashArray: '8 6',
+        opacity: 0.35, fill: true, fillColor: '#1a3a5c', fillOpacity: 0.03
+    }).addTo(layers.radius);
+
+    // ========================================
+    // COUNTY BOUNDARIES (approximate outlines)
+    // ========================================
+    const countyLabels = [
+        { name: 'Los Angeles County', center: [34.20, -118.60], hhi150k: '~870K', color: '#059669' },
+        { name: 'Orange County', center: [33.72, -117.78], hhi150k: '~390K', color: '#0891B2' },
+        { name: 'Ventura County', center: [34.35, -119.00], hhi150k: '~90K', color: '#7C3AED' },
+        { name: 'San Bernardino (W)', center: [34.10, -117.55], hhi150k: '~38K', color: '#DC2626' },
+        { name: 'Riverside (W)', center: [33.88, -117.50], hhi150k: '~48K', color: '#EA580C' }
+    ];
+
+    countyLabels.forEach(c => {
+        L.marker(c.center, {
+            icon: L.divIcon({
+                html: `<div style="
+                    font-family:'Helvetica Neue',Arial,sans-serif;
+                    font-size:11px; color:${c.color}; opacity:0.7;
+                    white-space:nowrap; text-align:center;
+                    font-weight:bold; letter-spacing:0.5px;
+                ">
+                    ${c.name}<br>
+                    <span style="font-size:10px;font-weight:normal;">HHI $150K+: ${c.hhi150k}</span>
+                </div>`,
+                iconSize: [160, 30], iconAnchor: [80, 15], className: 'empty'
+            })
+        }).addTo(layers.counties);
+    });
+
+    // ========================================
+    // PRIORITY ZONES — LA 5 Zones
+    // ========================================
+    const priorityZones = [
+        {
+            name: 'Beverly Hills / Bel Air / Holmby Hills', priority: 'S', color: '#DC2626',
+            center: [34.0836, -118.4254], radius: 4500,
+            labelPos: [34.12, -118.50],
+            households: '~22,000', income: '$195K–$207K', drive: '0–15分',
+            towns: 'Beverly Hills 90210/90211/90212, Bel Air (90077), Holmby Hills, Trousdale Estates',
+            note: 'Ultra-HNW最高密度。$200K+世帯 36–51%。紹介制アプローチ推奨。'
+        },
+        {
+            name: 'Palisades / Brentwood / Santa Monica', priority: 'S', color: '#DC2626',
+            center: [34.0440, -118.5200], radius: 5500,
+            labelPos: [34.08, -118.62],
+            households: '~28,000', income: '$110K–$192K', drive: '15–30分',
+            towns: 'Pacific Palisades, Brentwood, Brentwood Park, Santa Monica (Wilshire以北)',
+            note: '🔥 Palisades一部は火災復興中。短期はBrentwood優先。'
+        },
+        {
+            name: 'Pasadena / San Marino / LCF', priority: 'A', color: '#F59E0B',
+            center: [34.1677, -118.1320], radius: 6000,
+            labelPos: [34.22, -118.05],
+            households: '~18,000', income: '$105K–$242K', drive: '25–45分',
+            towns: 'La Cañada Flintridge ($200K+ 60%), San Marino, Bradbury, Arcadia, Sierra Madre',
+            note: '持家率 88.5% (LCF)。中華系富裕層に日系ブランドの信頼度高。'
+        },
+        {
+            name: 'Palos Verdes / Manhattan Beach', priority: 'A', color: '#F59E0B',
+            center: [33.7877, -118.3700], radius: 6500,
+            labelPos: [33.72, -118.45],
+            households: '~26,000', income: '$152K–$248K', drive: '30–50分',
+            towns: 'Rolling Hills (ゲーテッド), PV Estates, Rancho PV, Manhattan Beach, Hermosa Beach',
+            note: 'Rolling Hills MHI $250K。テック/ファイナンス幹部集中。火-木午前に集中配置。'
+        },
+        {
+            name: 'Calabasas / Hidden Hills', priority: 'A', color: '#F59E0B',
+            center: [34.1364, -118.6606], radius: 5000,
+            labelPos: [34.18, -118.74],
+            households: '~12,000', income: '$158K–$250K', drive: '30–45分',
+            towns: 'Hidden Hills (ゲーテッド, $200K+ 67.6%), Calabasas, Westlake Village, Agoura Hills',
+            note: 'エンタメ業界セレブ集中。デザイナーバッグ・ジュエリー高額取引。週末アポイント制。'
+        }
+    ];
+
+    priorityZones.forEach(z => {
+        // Connection line from base
+        L.polyline([BASE, z.center], {
+            color: z.color, weight: 2, opacity: 0.25,
+            dashArray: '0'
+        }).addTo(layers.priority);
+
+        // Zone circle
+        L.circle(z.center, {
+            radius: z.radius, color: z.color, weight: 3,
+            opacity: 0.7, fill: true, fillColor: z.color, fillOpacity: 0.12
+        }).addTo(layers.priority);
+
+        // Info label
+        L.marker(z.labelPos, {
+            icon: L.divIcon({
+                html: `<div style="
+                    font-family:'Helvetica Neue',Arial,sans-serif;
+                    white-space:nowrap; background:white;
+                    padding:8px 12px; border-radius:6px;
+                    border:2px solid ${z.color};
+                    box-shadow:0 3px 12px rgba(0,0,0,0.25);
+                    text-align:left; line-height:1.5;
+                ">
+                    <div style="margin-bottom:4px;">
+                        <span style="background:${z.color};color:white;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:bold;letter-spacing:0.5px;">${z.priority}</span>
+                        <span style="font-size:13px;font-weight:bold;color:#1a1a1a;margin-left:6px;">${z.name}</span>
+                    </div>
+                    <div style="font-size:11px;color:#444;line-height:1.6;">
+                        <b>${z.households}</b> 世帯 ｜ 年収 ${z.income} ｜ 車 ${z.drive}<br>
+                        <span style="font-size:10px;color:#666;">${z.towns}</span><br>
+                        <span style="font-size:10px;color:#0369A1;">${z.note}</span>
+                    </div>
+                </div>`,
+                iconSize: [420, 110], iconAnchor: [210, 110], className: 'empty'
+            })
+        }).addTo(layers.priority);
+    });
+
+    // ========================================
+    // EXCLUSION ZONES — LA Metro (High-crime areas)
+    // ========================================
+    const exclusionZones = [
+        // South LA / Compton / Watts
+        { name: 'Watts', center: [33.9425, -118.2468], radius: 2200, crime: '3,670/10万', zips: '90002, 90059' },
+        { name: 'South LA Core', center: [33.9711, -118.2620], radius: 3000, crime: '397%超', zips: '90001, 90003, 90011, 90037' },
+        { name: 'Compton', center: [33.8958, -118.2201], radius: 3000, crime: '22.5/10万殺人', zips: '90220-90222' },
+        { name: 'Lynwood', center: [33.9307, -118.2115], radius: 1800, crime: '445指数', zips: '90262' },
+        { name: 'Huntington Park', center: [33.9817, -118.2251], radius: 1500, crime: '50/1,000', zips: '90255' },
+        { name: 'South Gate', center: [33.9547, -118.2120], radius: 1500, crime: '41/1,000', zips: '90280' },
+        { name: 'Gardena', center: [33.8883, -118.3090], radius: 2000, crime: '542/10万', zips: '90247-90248' },
+        // Downtown / Skid Row
+        { name: 'Skid Row', center: [34.0440, -118.2437], radius: 1500, crime: '9,000+/10万', zips: '90013-90014, 90021' },
+        { name: 'Westlake / MacArthur Pk', center: [34.0597, -118.2760], radius: 1500, crime: 'ドラッグ市場', zips: '90057' },
+        { name: 'Pico-Union', center: [34.0470, -118.2780], radius: 1500, crime: '94位/100', zips: '90006, 90015' },
+        // East LA / Boyle Heights
+        { name: 'Boyle Heights', center: [34.0340, -118.2100], radius: 2200, crime: '114%超', zips: '90023, 90033, 90063' },
+        { name: 'East LA', center: [34.0240, -118.1690], radius: 2500, crime: '93%超', zips: '90022, 90040' },
+        { name: 'Lincoln Heights', center: [34.0696, -118.2100], radius: 1500, crime: '246%超', zips: '90031' },
+        // Inglewood / Hawthorne
+        { name: 'Inglewood', center: [33.9617, -118.3530], radius: 2200, crime: '62/1,000', zips: '90301-90305' },
+        { name: 'Hawthorne', center: [33.9164, -118.3526], radius: 2000, crime: '728/10万', zips: '90250' },
+        // Long Beach
+        { name: 'North Long Beach', center: [33.8650, -118.1890], radius: 2500, crime: '57.8/1,000', zips: '90805-90806' },
+        { name: 'Central Long Beach', center: [33.7800, -118.1890], radius: 2000, crime: '110殺人/10年', zips: '90813, 90802' },
+        // Pomona / El Monte
+        { name: 'Pomona', center: [34.0554, -117.7500], radius: 3000, crime: '45-47/1,000', zips: '91766-91768' },
+        { name: 'El Monte', center: [34.0686, -118.0276], radius: 2500, crime: '49-50/1,000', zips: '91731-91733' },
+        // San Bernardino
+        { name: 'San Bernardino', center: [34.1083, -117.2898], radius: 5000, crime: '1,186/10万', zips: '92401-92411' }
+    ];
+
+    exclusionZones.forEach(z => {
+        L.circle(z.center, {
+            radius: z.radius,
+            color: '#FF0000', weight: 1, dashArray: '4 4',
+            opacity: 0.35, fill: true, fillColor: '#FF0000', fillOpacity: 0.10
+        }).addTo(layers.exclusion);
+
+        L.marker(z.center, {
+            icon: L.divIcon({
+                html: `<div style="font-family:Arial;font-size:9px;color:rgba(200,0,0,0.50);white-space:nowrap;text-align:center;">
+                    ⚠ ${z.name}<br><span style="font-size:8px;opacity:0.7;">${z.crime}</span>
+                </div>`,
+                iconSize: [110, 24], iconAnchor: [55, 12], className: 'empty'
+            })
+        }).addTo(layers.exclusion);
+    });
+
+    // ========================================
+    // PHASE 2 CANDIDATE AREAS
+    // ========================================
+    const phase2Zones = [
+        {
+            name: 'Newport Beach / Corona del Mar', center: [33.6170, -117.9290], radius: 5000,
+            households: '30,000', income: '$158K (平均$249K)', drive: '60–75分', score: '5/5',
+            note: 'SoCal最高クラスの$200K+集中率。OC拠点で独立TAM展開可能。'
+        },
+        {
+            name: 'Laguna Beach / Dana Point', center: [33.5427, -117.7854], radius: 5000,
+            households: '18,000', income: '$140K', drive: '70–90分', score: '4/5',
+            note: 'ラグジュアリー文化根付くコースタルエリア。60歳+資産蓄積層。'
+        },
+        {
+            name: 'Thousand Oaks / Newbury Park', center: [34.1706, -118.8376], radius: 6000,
+            households: '22,000', income: '$134K', drive: '45–60分', score: '4/5',
+            note: 'Calabasasゾーンの自然な北部延長。同日ルート組み可能。'
+        },
+        {
+            name: 'Malibu', center: [34.0259, -118.7798], radius: 4000,
+            households: '2,800', income: '$192K (平均$302K)', drive: '25–45分', score: '4/5',
+            note: '世帯数少だが超富裕層。1件あたり取引額が極めて高い。火災復興状況次第。'
+        },
+        {
+            name: 'Hancock Pk / Larchmont / Los Feliz', center: [34.0770, -118.3180], radius: 3000,
+            households: '9,000', income: '$130K–$165K', drive: '10–20分', score: '3/5',
+            note: 'BH隣接オールドマネー地区。50歳+密度高。BH/Brentwoodルートとスタック可能。'
+        }
+    ];
+
+    phase2Zones.forEach(z => {
+        L.polyline([BASE, z.center], {
+            color: '#8B5CF6', weight: 1.5, opacity: 0.2, dashArray: '4 8'
+        }).addTo(layers.phase2);
+
+        L.circle(z.center, {
+            radius: z.radius,
+            color: '#8B5CF6', weight: 2, dashArray: '6 4',
+            opacity: 0.5, fill: true, fillColor: '#8B5CF6', fillOpacity: 0.08
+        }).addTo(layers.phase2);
+
+        L.marker(z.center, {
+            icon: L.divIcon({
+                html: `<div style="
+                    font-family:'Helvetica Neue',Arial,sans-serif;
+                    white-space:nowrap; background:rgba(255,255,255,0.92);
+                    padding:6px 10px; border-radius:5px;
+                    border:1.5px solid #8B5CF6;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.15);
+                    text-align:left; line-height:1.4;
+                ">
+                    <div style="margin-bottom:2px;">
+                        <span style="background:#8B5CF6;color:white;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:bold;">Ph2</span>
+                        <span style="font-size:12px;font-weight:bold;color:#1a1a1a;margin-left:4px;">${z.name}</span>
+                    </div>
+                    <div style="font-size:10px;color:#555;line-height:1.5;">
+                        <b>${z.households}</b> 世帯 ｜ ${z.income} ｜ 車 ${z.drive} ｜ ★${z.score}<br>
+                        <span style="font-size:9px;color:#0369A1;">${z.note}</span>
+                    </div>
+                </div>`,
+                iconSize: [380, 75], iconAnchor: [190, 38], className: 'empty'
+            })
+        }).addTo(layers.phase2);
+    });
+
+    </script>
+</body>
+</html>
